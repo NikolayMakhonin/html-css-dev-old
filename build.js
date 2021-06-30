@@ -101,8 +101,8 @@ function watchFile(options) {
 function prepareGlobPatterns(inputDir, filesPatterns) {
 	return filesPatterns.map(pattern => {
 		return normalizePath(pattern.startsWith('!')
-				? '!' + path.join(inputDir, pattern.substring(1))
-				: path.join(inputDir, pattern))
+			? '!' + path.join(inputDir, pattern.substring(1))
+			: path.join(inputDir, pattern))
 	})
 }
 

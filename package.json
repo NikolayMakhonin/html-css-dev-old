@@ -4,7 +4,8 @@
 	"description": "Tool for fast develop web pages on html+css or postcss",
 	"main": "server.js",
 	"scripts": {
-		"server": "node server.js",
+		"start": "node -e \"require('./start.js')({ port: 3333, publicDir: 'public', inputDir: 'source', outputDir: 'public', filesPatterns: ['**'], map: true})\"",
+		"server": "node -e \"require('./server.js')({ port: 3333, publicDir: 'public'})\"",
 		"build": "node -e \"require('./build.js')({ watch: false, inputDir: 'source', outputDir: 'public', filesPatterns: ['**'], map: true})\"",
 		"watch": "node -e \"require('./build.js')({ watch: true, inputDir: 'source', outputDir: 'public', filesPatterns: ['**'], map: true})\""
 	},
