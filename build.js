@@ -4,6 +4,7 @@ const multimatch = require("multimatch");
 const fse = require('fs-extra')
 const nodeWatch = require('node-watch')
 const postcss = require('postcss')
+const postcssLoadConfig = require('postcss-load-config')
 
 // region helpers
 
@@ -11,12 +12,20 @@ const postcss = require('postcss')
 // 	return filePath.match(/([^\/\\]+?)(\.\w+)?$/)[1]
 // }
 
-function filePathWithoutExtension(filePath) {
-	return filePath.match(/^(.+?)(\.\w+)?$/)[1]
-}
+// function filePathWithoutExtension(filePath) {
+// 	return filePath.match(/^(.+?)(\.\w+)?$/)[1]
+// }
 
 function normalizePath(filepath) {
 	return filepath.replace(/\\/g, '/')
+}
+
+async function fileExists(filePath) {
+	if (!fse.existsSync(filePath)) {
+		return false
+	}
+    const stat = await fse.lstat(filePath);
+	return stat.isFile()
 }
 
 // endregion
@@ -26,31 +35,36 @@ function normalizePath(filepath) {
 function prepareBuildFileOptions(inputFile, {
 	inputDir,
 	outputDir,
+	postcssConfig,
 }) {
 	const outputFile = normalizePath(
-			path.join(
-					outputDir,
-					path.relative(inputDir, filePathWithoutExtension(inputFile) + '.css'),
-			)
+		path.join(
+			outputDir,
+			path.relative(inputDir, inputFile),
+		)
 	)
+
 	return {
 		inputFile,
 		outputFile,
+		postcssConfig,
 	}
 }
 
-async function buildCss({inputFile, outputFile, map}) {
+async function buildCss({inputFile, outputFile, postcssConfig}) {
+	// outputFile = filePathWithoutExtension(outputFile) + '.css'
+
 	const source = await fse.readFile(inputFile, { encoding: 'utf-8' })
-	const result = await postcss()
-			.process(source, {
-				from: inputFile,
-				to: outputFile,
-				map,
-			})
+	const result = await postcss(postcssConfig && postcssConfig.plugins || [])
+		.process(source, {
+			...postcssConfig && postcssConfig.options,
+			from: inputFile,
+			to: outputFile,
+		})
 
 	await Promise.all([
 		fse.writeFile(outputFile, result.css, () => true),
-		map && result.map && await fs.writeFile(outputFile + '.map', result.map.toString()),
+		result.map && await fse.writeFile(outputFile + '.map', result.map.toString()),
 		null, // TODO delete me
 	])
 }
@@ -62,12 +76,12 @@ async function copyFile({inputFile, outputFile}) {
 	})
 }
 
-function buildFile({inputFile, outputFile}) {
+function buildFile({inputFile, outputFile, postcssConfig}) {
 	outputFile = normalizePath(path.resolve(outputFile))
 	const ext = (path.extname(inputFile) || '').toLowerCase()
 	switch (ext) {
 		case '.css':
-			return buildCss({inputFile, outputFile})
+			return buildCss({inputFile, outputFile, postcssConfig})
 		default:
 			return copyFile({inputFile, outputFile})
 	}
@@ -75,9 +89,9 @@ function buildFile({inputFile, outputFile}) {
 
 function watchFile(options) {
 	buildFile(options)
-			.catch(err => console.error(err))
+		.catch(err => console.error(err))
 
-	return () => {}
+	return null
 }
 
 // endregion
@@ -93,25 +107,35 @@ function prepareGlobPatterns(inputDir, filesPatterns) {
 }
 
 async function prepareBuildFilesOptions({
-																					inputDir,
-																					outputDir,
-																					filesPatterns,
-																				}) {
+	inputDir,
+	outputDir,
+	filesPatterns,
+	map,
+}) {
 	inputDir = path.resolve(inputDir)
 	outputDir = path.resolve(outputDir)
 	const patterns = prepareGlobPatterns(inputDir, filesPatterns)
+	let postcssConfig
 
 	await Promise.all([
 		fse.rmdir(outputDir, { recursive: true })
-				.catch(err => {
-					console.error(err)
-				}),
+			.catch(err => {
+				console.error(err)
+			}),
+		(async () => {
+			postcssConfig = await postcssLoadConfig({
+				map: map === true ? { inline: false }
+					: map === 'inline' ? { inline: true }
+					: null
+			})
+		})(),
 	])
 
 	return {
 		inputDir,
 		outputDir,
 		patterns,
+		postcssConfig,
 	}
 }
 
@@ -124,6 +148,7 @@ async function buildFiles(options) {
 		inputDir,
 		outputDir,
 		patterns,
+		postcssConfig,
 	} = await prepareBuildFilesOptions(options)
 
 	const inputFiles = await globby(patterns)
@@ -131,6 +156,7 @@ async function buildFiles(options) {
 	const buildOptions = inputFiles.map(pageFile => prepareBuildFileOptions(pageFile, {
 		inputDir,
 		outputDir,
+		postcssConfig,
 	}))
 
 	await Promise.all([
@@ -147,6 +173,7 @@ async function watchFiles(options) {
 		inputDir,
 		outputDir,
 		patterns,
+		postcssConfig,
 	} = await prepareBuildFilesOptions(options)
 
 	const watchers = {}
@@ -157,6 +184,7 @@ async function watchFiles(options) {
 		watchers[file] = watchFile(prepareBuildFileOptions(file, {
 			inputDir,
 			outputDir,
+			postcssConfig,
 		}))
 	}
 
@@ -193,6 +221,8 @@ async function watchFiles(options) {
 		}
 	})
 
+	console.log('watch started...')
+
 	return () => {
 		Object.keys(watchers).forEach(pageUnwatch)
 	}
@@ -213,11 +243,14 @@ function _build(options) {
 //   inputDir,
 //   outputDir,
 //   filesPatterns,
+//   map,
 // }
-export async function build(options) {
+async function build(options) {
 	_build(options)
-			.catch(err => {
-				console.error(err)
-				process.exit(1)
-			})
+		.catch(err => {
+			console.error(err)
+			process.exit(1)
+		})
 }
+
+module.exports = build

@@ -32,46 +32,46 @@ async function fileExists(filePath) {
 const indexFiles = ['index.html', 'index.htm']
 
 server
-		.use(
-				'/',
-				async function(req, res, next) {
-					// liveReloadInstance(req, res, next);
+	.use(
+		'/',
+		async function(req, res, next) {
+			// liveReloadInstance(req, res, next);
 
-					let filePath = path.resolve(publicDir + req.path)
+			let filePath = path.resolve(publicDir + req.path)
 
-					// region Search index files
+			// region Search index files
 
-					let newFilePath = filePath
-					let i = 0
-					while (true) {
-						if (await fileExists(newFilePath)) {
-							filePath = newFilePath
-							break
-						}
-						if (i >= indexFiles.length) {
-							break
-						}
-						newFilePath = path.join(filePath, indexFiles[i])
-						i++
-					}
+			let newFilePath = filePath
+			let i = 0
+			while (true) {
+				if (await fileExists(newFilePath)) {
+					filePath = newFilePath
+					break
+				}
+				if (i >= indexFiles.length) {
+					break
+				}
+				newFilePath = path.join(filePath, indexFiles[i])
+				i++
+			}
 
-					// endregion
+			// endregion
 
-					if (!/\.(html|htm)$/.test(filePath)) {
-						next()
-						return
-					}
+			if (!/\.(html|htm)$/.test(filePath)) {
+				next()
+				return
+			}
 
-					res.set('Cache-Control', 'no-store')
-					res.sendFile(filePath)
-				},
+			res.set('Cache-Control', 'no-store')
+			res.sendFile(filePath)
+		},
 
-				sirv(publicDir, {
-					dev: true,
-				})
-		)
+		sirv(publicDir, {
+			dev: true,
+		})
+	)
 
 server
-		.listen(port, () => {
-			console.log(`Server started: http://localhost:${port}/`)
-		})
+	.listen(port, () => {
+		console.log(`Server started: http://localhost:${port}/`)
+	})
