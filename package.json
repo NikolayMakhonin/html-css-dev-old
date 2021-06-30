@@ -1,5 +1,5 @@
 {
-	"name": "html-css-dev",
+	"name": "@flemist/html-css-dev",
 	"version": "0.0.1",
 	"description": "Tool for fast develop web pages on html+css or postcss",
 	"main": "server.js",
@@ -18,6 +18,9 @@
 		"url": "https://github.com/NikolayMakhonin/html-css-dev/issues"
 	},
 	"homepage": "https://github.com/NikolayMakhonin/html-css-dev#readme",
+	"publishConfig": {
+		"access": "public"
+	},
 	"dependencies": {
 		"@flemist/easy-livereload": "^1.4.3",
 		"express": "^4.17.1",
@@ -27,9 +30,7 @@
 		"node-watch": "^0.7.1",
 		"postcss": "^8.3.5",
 		"postcss-load-config": "^3.1.0",
-		"sirv": "^1.0.12"
-	},
-	"devDependencies": {
+		"sirv": "^1.0.12",
 		"@types/fs-extra": "^9.0.11",
 		"autoprefixer": "^10.2.6",
 		"cssnano": "^5.0.6",
