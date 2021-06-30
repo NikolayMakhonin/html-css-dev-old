@@ -4,7 +4,7 @@
   "description": "Tool for fast develop web pages on html+css or postcss",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js"
   },
   "repository": {
     "type": "git",
@@ -15,5 +15,11 @@
   "bugs": {
     "url": "https://github.com/NikolayMakhonin/html-css-dev/issues"
   },
-  "homepage": "https://github.com/NikolayMakhonin/html-css-dev#readme"
+  "homepage": "https://github.com/NikolayMakhonin/html-css-dev#readme",
+  "dependencies": {
+    "@flemist/easy-livereload": "^1.4.3",
+    "express": "^4.17.1",
+    "fs-extra": "^10.0.0",
+    "sirv": "^1.0.12"
+  }
 }
