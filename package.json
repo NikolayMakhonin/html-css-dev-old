@@ -4,7 +4,7 @@
 	"description": "Tool for fast develop web pages on html+css or postcss",
 	"main": "server.js",
 	"scripts": {
-		"start": "node server.js",
+		"server": "node server.js",
 		"build": "node -e \"require('./build.js')({ watch: false, inputDir: 'source', outputDir: 'public', filesPatterns: ['**'], map: true})\"",
 		"watch": "node -e \"require('./build.js')({ watch: true, inputDir: 'source', outputDir: 'public', filesPatterns: ['**'], map: true})\""
 	},
