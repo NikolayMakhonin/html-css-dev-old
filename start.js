@@ -1,14 +1,25 @@
-const server = require('./server')
-const build = require('./build')
+const { startServer } = require('./server')
+const { build } = require('./build')
+const fse = require('fs-extra')
 
-function start(options) {
-	build({
+async function _start(options) {
+	await build({
 		watch: true,
 		outputDir: options.publicDir,
 		publicDir: options.outputDir,
 		...options,
 	})
-	server(options)
+	await startServer(options)
 }
+
+function start(options) {
+	_start(options)
+		.catch(err => {
+			console.error(err)
+			process.exit(1)
+		})
+}
+
+start.start = _start
 
 module.exports = start

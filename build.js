@@ -76,14 +76,19 @@ async function copyFile({inputFile, outputFile}) {
 	})
 }
 
-function buildFile({inputFile, outputFile, postcssConfig}) {
+async function buildFile({inputFile, outputFile, postcssConfig}) {
 	outputFile = normalizePath(path.resolve(outputFile))
+	if (fse.existsSync(outputFile)) {
+		await fse.unlink(outputFile)
+	}
 	const ext = (path.extname(inputFile) || '').toLowerCase()
 	switch (ext) {
 		case '.css':
-			return buildCss({inputFile, outputFile, postcssConfig})
+			await buildCss({inputFile, outputFile, postcssConfig})
+			break
 		default:
-			return copyFile({inputFile, outputFile})
+			await copyFile({inputFile, outputFile})
+			break
 	}
 }
 
@@ -111,6 +116,7 @@ async function prepareBuildFilesOptions({
 	outputDir,
 	filesPatterns,
 	map,
+	clear,
 }) {
 	inputDir = path.resolve(inputDir)
 	outputDir = path.resolve(outputDir)
@@ -118,7 +124,7 @@ async function prepareBuildFilesOptions({
 	let postcssConfig
 
 	await Promise.all([
-		fse.rmdir(outputDir, { recursive: true })
+		clear && fse.rmdir(outputDir, { recursive: true })
 			.catch(err => {
 				console.error(err)
 			}),
@@ -244,6 +250,7 @@ function _build(options) {
 //   outputDir,
 //   filesPatterns,
 //   map,
+//   clear,
 // }
 async function build(options) {
 	_build(options)
@@ -252,5 +259,7 @@ async function build(options) {
 			process.exit(1)
 		})
 }
+
+build.build = _build
 
 module.exports = build

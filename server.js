@@ -4,10 +4,15 @@ const fse = require('fs-extra')
 const sirv = require('sirv')
 const liveReload = require('@flemist/easy-livereload')
 
-function startServer({
+async function _startServer({
 	port = 3333,
 	publicDir,
 }) {
+	publicDir = path.resolve(publicDir)
+	if (!fse.existsSync(publicDir)) {
+		await fse.mkdirp(publicDir)
+	}
+
 	console.debug('port=', port)
 	console.debug('publicDir=', publicDir)
 
@@ -78,5 +83,15 @@ function startServer({
 			console.log(`Server started: http://localhost:${port}/`)
 		})
 }
+
+function startServer(options) {
+	_startServer(options)
+		.catch(err => {
+			console.error(err)
+			process.exit(1)
+		})
+}
+
+startServer.startServer = _startServer
 
 module.exports = startServer
