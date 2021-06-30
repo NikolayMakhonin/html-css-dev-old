@@ -28,10 +28,10 @@ function prepareBuildFileOptions(inputFile, {
 	outputDir,
 }) {
 	const outputFile = normalizePath(
-		path.join(
-			outputDir,
-			path.relative(inputDir, filePathWithoutExtension(inputFile) + '.css'),
-		)
+			path.join(
+					outputDir,
+					path.relative(inputDir, filePathWithoutExtension(inputFile) + '.css'),
+			)
 	)
 	return {
 		inputFile,
@@ -42,11 +42,11 @@ function prepareBuildFileOptions(inputFile, {
 async function buildCss({inputFile, outputFile, map}) {
 	const source = await fse.readFile(inputFile, { encoding: 'utf-8' })
 	const result = await postcss()
-		.process(source, {
-			from: inputFile,
-			to: outputFile,
-			map,
-		})
+			.process(source, {
+				from: inputFile,
+				to: outputFile,
+				map,
+			})
 
 	await Promise.all([
 		fse.writeFile(outputFile, result.css, () => true),
@@ -75,7 +75,7 @@ function buildFile({inputFile, outputFile}) {
 
 function watchFile(options) {
 	buildFile(options)
-      .catch(err => console.error(err))
+			.catch(err => console.error(err))
 
 	return () => {}
 }
@@ -87,25 +87,25 @@ function watchFile(options) {
 function prepareGlobPatterns(inputDir, filesPatterns) {
 	return filesPatterns.map(pattern => {
 		return normalizePath(pattern.startsWith('!')
-			? '!' + path.join(inputDir, pattern.substring(1))
-			: path.join(inputDir, pattern))
+				? '!' + path.join(inputDir, pattern.substring(1))
+				: path.join(inputDir, pattern))
 	})
 }
 
 async function prepareBuildFilesOptions({
-	inputDir,
-	outputDir,
-	filesPatterns,
-}) {
+																					inputDir,
+																					outputDir,
+																					filesPatterns,
+																				}) {
 	inputDir = path.resolve(inputDir)
 	outputDir = path.resolve(outputDir)
 	const patterns = prepareGlobPatterns(inputDir, filesPatterns)
 
 	await Promise.all([
 		fse.rmdir(outputDir, { recursive: true })
-			.catch(err => {
-				console.error(err)
-			}),
+				.catch(err => {
+					console.error(err)
+				}),
 	])
 
 	return {
@@ -200,24 +200,24 @@ async function watchFiles(options) {
 
 // endregion
 
+function _build(options) {
+	if (options.watch) {
+		return watchFiles(options)
+	} else {
+		return buildFiles(options)
+	}
+}
+
 // options: {
+//   watch,
 //   inputDir,
 //   outputDir,
 //   filesPatterns,
-//   watch,
 // }
 export async function build(options) {
-	if (options.watch) {
-		return watchFiles(options)
+	_build(options)
 			.catch(err => {
 				console.error(err)
 				process.exit(1)
 			})
-	} else {
-		return buildFiles(options)
-			.catch(err => {
-				console.error(err)
-				process.exit(1)
-			})
-	}
 }
