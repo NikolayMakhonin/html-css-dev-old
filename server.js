@@ -5,7 +5,8 @@ const sirv = require('sirv')
 const liveReload = require('@flemist/easy-livereload')
 
 async function _startServer({
-	port = 3333,
+	port = 3522,
+	liveReloadPort = 34426,
 	publicDir,
 }) {
 	publicDir = path.resolve(publicDir)
@@ -24,7 +25,8 @@ async function _startServer({
 		checkFunc: (file) => {
 			console.log('[LiveReload] ' + file);
 			return true;
-		}
+		},
+		port: liveReloadPort,
 	})
 	server.use(liveReloadInstance)
 

@@ -16,16 +16,77 @@ const postcssLoadConfig = require('postcss-load-config')
 // 	return filePath.match(/^(.+?)(\.\w+)?$/)[1]
 // }
 
+// function delay(timeMilliseconds) {
+// 	return new Promise(resolve => {
+// 		setTimeout(resolve, timeMilliseconds)
+// 	})
+// }
+
+// async function tryRun(
+// 	tryCount,
+// 	_delay,
+// 	func
+// ) {
+// 	let i = 0
+// 	while (true) {
+// 		try {
+// 			return await func()
+// 		} catch (error) {
+// 			i++
+// 			if (!tryCount || i >= tryCount) {
+// 				throw error
+// 			}
+// 			if (_delay) {
+// 				await delay(_delay)
+// 			}
+// 		}
+// 	}
+// }
+
 function normalizePath(filepath) {
 	return filepath.replace(/\\/g, '/')
 }
 
-async function fileExists(filePath) {
+async function getPathStat(filePath) {
 	if (!fse.existsSync(filePath)) {
-		return false
+		return null
 	}
     const stat = await fse.lstat(filePath);
-	return stat.isFile()
+	return stat
+}
+
+async function dirIsEmpty(dir) {
+	const dirIter = await fse.opendir(dir);
+	const {value, done} = await dirIter[Symbol.asyncIterator]().next();
+	if (!done) {
+		await dirIter.close()
+		return false
+	}
+	return true
+}
+
+async function removeEmptyDirs(dir) {
+	const pathStat = await getPathStat(dir)
+	if (pathStat.isDirectory() && await dirIsEmpty(dir)) {
+		try {
+			await fse.rmdir(dir, {
+				recursive: false,
+			})
+		} catch (err) {
+			if (fse.existsSync(dir)) {
+				throw err
+			}
+		}
+		await removeEmptyDirs(path.dirname(dir))
+	}
+}
+
+async function removeFile(file) {
+	if (fse.existsSync(file)) {
+		await fse.unlink(file)
+		await removeEmptyDirs(path.dirname(file))
+		// await tryRun(5, 500, () => removeEmptyDirs(path.dirname(file)))
+	}
 }
 
 // endregion
@@ -62,18 +123,36 @@ async function buildCss({inputFile, outputFile, postcssConfig}) {
 			to: outputFile,
 		})
 
+	await fse.mkdirp(path.dirname(outputFile))
+
 	await Promise.all([
 		fse.writeFile(outputFile, result.css, () => true),
 		result.map && await fse.writeFile(outputFile + '.map', result.map.toString()),
-		null, // TODO delete me
 	])
+
+	return async (remove) => {
+		if (remove) {
+			await Promise.all([
+				removeFile(outputFile),
+				removeFile(outputFile + '.map'),
+			])
+		}
+	}
 }
 
 async function copyFile({inputFile, outputFile}) {
-	return fse.copy(inputFile, outputFile, {
+	await fse.mkdirp(path.dirname(outputFile))
+
+	await fse.copy(inputFile, outputFile, {
 		overwrite: true,
 		preserveTimestamps: true,
 	})
+
+	return async (remove) => {
+		if (remove) {
+			await removeFile(outputFile)
+		}
+	}
 }
 
 async function buildFile({inputFile, outputFile, postcssConfig}) {
@@ -84,19 +163,14 @@ async function buildFile({inputFile, outputFile, postcssConfig}) {
 	const ext = (path.extname(inputFile) || '').toLowerCase()
 	switch (ext) {
 		case '.css':
-			await buildCss({inputFile, outputFile, postcssConfig})
-			break
+			return buildCss({inputFile, outputFile, postcssConfig})
 		default:
-			await copyFile({inputFile, outputFile})
-			break
+			return copyFile({inputFile, outputFile})
 	}
 }
 
 function watchFile(options) {
-	buildFile(options)
-		.catch(err => console.error(err))
-
-	return null
+	return buildFile(options)
 }
 
 // endregion
@@ -186,7 +260,7 @@ async function watchFiles(options) {
 
 	const inputFiles = await globby(patterns)
 
-	function pageWatch(file) {
+	function fileWatch(file) {
 		watchers[file] = watchFile(prepareBuildFileOptions(file, {
 			inputDir,
 			outputDir,
@@ -194,43 +268,95 @@ async function watchFiles(options) {
 		}))
 	}
 
-	function pageUnwatch(file) {
-		const unsubscribe = watchers[file]
-		if (unsubscribe) {
-			unsubscribe()
-		}
+	async function fileUnwatch(file, remove) {
+		const unsubscribePromise = watchers[file]
 		watchers[file] = null
+		const unsubscribe = await unsubscribePromise
+		if (unsubscribe) {
+			await unsubscribe(remove)
+		}
 	}
 
-	inputFiles.forEach(file => pageWatch(normalizePath(file)))
-
-	nodeWatch(inputDir, {
-		recursive: true,
-		filter(inputFile) {
-			return multimatch([inputFile], patterns).length > 0
-		},
-	}, async function(evt, file) {
-		file = normalizePath(file)
-
+	console.log('watch v1')
+	async function onFileAdded(evt, file) {
 		try {
-			if (evt === 'remove') {
-				if (watchers[file]) {
-					pageUnwatch(file)
-					console.log('[Deleted]', file);
-				}
-			} else if (!watchers[file] && await fileExists(file)) {
-				pageWatch(file)
-				console.log('[Added]', file);
-			}
+			fileWatch(file)
+			console.log('[Added]', file)
 		} catch (err) {
 			console.error(err)
 		}
-	})
+	}
+
+	async function onPathChanged(evt, _path) {
+		_path = normalizePath(_path)
+
+		if (evt === 'remove') {
+			const pathAsDir = _path + '/'
+			await Promise.all(
+				Object.keys(watchers).map(async file => {
+					if (file === _path || file.startsWith(pathAsDir)) {
+						await fileUnwatch(file, true)
+						console.log('[Deleted]', file);
+					}
+				})
+			)
+			return
+		}
+
+		const pathStat = await getPathStat(_path)
+		if (pathStat) {
+			if (pathStat.isFile()) {
+				await onFileAdded(evt, _path)
+			} else {
+				const paths = await fse.readdir(_path)
+				await Promise.all(paths.map(o => onPathChanged(evt, path.join(_path, o))))
+			}
+		}
+	}
+
+	const events = []
+	function enqueueEvent(evt, path) {
+		events.push({evt, path})
+		processEvents()
+	}
+
+	let processEventsRunning
+	async function processEvents() {
+		if (processEventsRunning) {
+			return
+		}
+		processEventsRunning = true
+		while (events.length > 0) {
+			const {evt, path} = events.shift()
+			try {
+				await onPathChanged(evt, path)
+			} catch (err) {
+				console.error(err)
+			}
+		}
+		processEventsRunning = false
+	}
+
+	nodeWatch(inputDir, {
+		recursive: true,
+		delay: 0,
+		filter(inputFile) {
+			if (multimatch([inputFile], patterns).length > 0) {
+				console.log('watch: ' + inputFile)
+				return true
+			} else {
+				console.log('watch skip: ' + inputFile)
+				return false
+			}
+		},
+	}, enqueueEvent)
+
+	inputFiles.forEach(file => fileWatch(normalizePath(file)))
 
 	console.log('watch started...')
 
-	return () => {
-		Object.keys(watchers).forEach(pageUnwatch)
+	return async () => {
+		await Promise.all(Object.keys(watchers).map(fileUnwatch))
 	}
 }
 
