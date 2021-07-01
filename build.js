@@ -12,9 +12,9 @@ const postcssLoadConfig = require('postcss-load-config')
 // 	return filePath.match(/([^\/\\]+?)(\.\w+)?$/)[1]
 // }
 
-// function filePathWithoutExtension(filePath) {
-// 	return filePath.match(/^(.+?)(\.\w+)?$/)[1]
-// }
+function filePathWithoutExtension(filePath) {
+	return filePath.match(/^(.+?)(\.\w+)?$/)[1]
+}
 
 // function delay(timeMilliseconds) {
 // 	return new Promise(resolve => {
@@ -43,16 +43,56 @@ const postcssLoadConfig = require('postcss-load-config')
 // 	}
 // }
 
+function forEachParentDirs(dir, func) {
+	let prevDir = normalizePath(dir)
+	func(prevDir)
+	let _dir = normalizePath(path.dirname(prevDir))
+	while (_dir !== prevDir) {
+		func(_dir)
+		prevDir = _dir
+		_dir = normalizePath(path.dirname(prevDir))
+	}
+}
+
 function normalizePath(filepath) {
 	return filepath.replace(/\\/g, '/')
 }
 
+async function getDirPaths(dir) {
+	async function _getDirPaths(dir, dirs, files) {
+		const paths = await fse.readdir(dir)
+		await Promise.all(paths.map(async o => {
+			const subPath = normalizePath(path.join(dir, o))
+			const stat = await getPathStat(subPath)
+			if (stat.isFile()) {
+				files.push(subPath)
+			} else if (stat.isDirectory()) {
+				dirs.push(subPath)
+				await _getDirFiles(subPath, files)
+			}
+		}))
+		return files
+	}
+
+	const dirs = []
+	const files = []
+	await _getDirPaths(dir, dirs, files)
+
+	return {
+		dirs,
+		files,
+	}
+}
 async function getPathStat(filePath) {
 	if (!fse.existsSync(filePath)) {
 		return null
 	}
-    const stat = await fse.lstat(filePath);
-	return stat
+	try {
+		const stat = await fse.lstat(filePath);
+		return stat
+	} catch {
+		return null
+	}
 }
 
 async function dirIsEmpty(dir) {
@@ -113,30 +153,46 @@ function prepareBuildFileOptions(inputFile, {
 }
 
 async function buildCss({inputFile, outputFile, postcssConfig}) {
-	// outputFile = filePathWithoutExtension(outputFile) + '.css'
+	outputFile = filePathWithoutExtension(outputFile) + '.css'
 
-	const source = await fse.readFile(inputFile, { encoding: 'utf-8' })
-	const result = await postcss(postcssConfig && postcssConfig.plugins || [])
-		.process(source, {
-			...postcssConfig && postcssConfig.options,
-			from: inputFile,
-			to: outputFile,
-		})
+	try {
+		const source = await fse.readFile(inputFile, { encoding: 'utf-8' })
+		const map = postcssConfig && postcssConfig.options && postcssConfig.options.map
 
-	await fse.mkdirp(path.dirname(outputFile))
+		const result = await postcss(postcssConfig && postcssConfig.plugins || [])
+			.process(source, {
+				...postcssConfig && postcssConfig.options,
+				map: map || {inline: false},
+				from: inputFile,
+				to: outputFile,
+			})
 
-	await Promise.all([
-		fse.writeFile(outputFile, result.css, () => true),
-		result.map && await fse.writeFile(outputFile + '.map', result.map.toString()),
-	])
+		const resultMap = result.map && result.map.toJSON()
+		const dependencies = resultMap.sources
+			&& resultMap.sources
+				.map(o => normalizePath(path.resolve(path.dirname(inputFile), o)))
+				.filter(o => o !== inputFile)
 
-	return async (remove) => {
-		if (remove) {
-			await Promise.all([
-				removeFile(outputFile),
-				removeFile(outputFile + '.map'),
-			])
+		const outputFiles = []
+		async function writeFile(file, content) {
+			await fse.writeFile(outputFile, result.css, () => true)
+			outputFiles.push(file)
 		}
+
+		await fse.mkdirp(path.dirname(outputFile))
+
+		await Promise.all([
+			writeFile(outputFile, result.css),
+			map && result.map && await writeFile(outputFile + '.map', result.map.toString()),
+		])
+
+		return {
+			dependencies,
+			outputFiles,
+		}
+	} catch (err) {
+		console.error(err)
+		return null
 	}
 }
 
@@ -148,10 +204,8 @@ async function copyFile({inputFile, outputFile}) {
 		preserveTimestamps: true,
 	})
 
-	return async (remove) => {
-		if (remove) {
-			await removeFile(outputFile)
-		}
+	return {
+		outputFiles: [outputFile]
 	}
 }
 
@@ -162,7 +216,7 @@ async function buildFile({inputFile, outputFile, postcssConfig}) {
 	}
 	const ext = (path.extname(inputFile) || '').toLowerCase()
 	switch (ext) {
-		case '.css':
+		case '.pcss':
 			return buildCss({inputFile, outputFile, postcssConfig})
 		default:
 			return copyFile({inputFile, outputFile})
@@ -256,60 +310,171 @@ async function watchFiles(options) {
 		postcssConfig,
 	} = await prepareBuildFilesOptions(options)
 
+	const allDependencies = new Map()
+	const dependants = new Map()
 	const watchers = {}
+	const dirs = new Set()
 
 	const inputFiles = await globby(patterns)
 
+	inputFiles.forEach(file => {
+		forEachParentDirs(path.dirname(file), dir => {
+			dirs.add(dir)
+		})
+	})
+
 	function fileWatch(file) {
-		watchers[file] = watchFile(prepareBuildFileOptions(file, {
-			inputDir,
-			outputDir,
-			postcssConfig,
-		}))
+		const watcher = (async () => {
+			const watcher = await watchFile(prepareBuildFileOptions(file, {
+				inputDir,
+				outputDir,
+				postcssConfig,
+			}))
+
+			if (!watcher) {
+				return
+			}
+
+			if (!watcher.dependencies) {
+				watcher.dependencies = []
+			}
+
+			const newDependencies = watcher.dependencies && watcher.dependencies
+				.reduce((a, file) => {
+					a.add(file)
+					forEachParentDirs(path.dirname(file), dir => {
+						a.add(dir)
+					})
+					return a
+				}, new Set())
+
+
+			// delete dependencies
+			const oldDependencies = dependants.get(file)
+			if (oldDependencies) {
+				oldDependencies.forEach(o => {
+					const _dependants = allDependencies.get(o)
+					if (_dependants) {
+						_dependants.delete(file)
+						if (_dependants.size === 0) {
+							allDependencies.delete(o)
+						}
+					}
+				})
+			}
+			dependants.set(file, newDependencies)
+
+			// add dependencies
+			newDependencies.forEach(o => {
+				let _dependants = allDependencies.get(o)
+				if (!_dependants) {
+					_dependants = new Set()
+					allDependencies.set(o, _dependants)
+				}
+				_dependants.add(file)
+			})
+
+			return watcher
+		})()
+		watchers[file] = watcher
+		return watcher
 	}
 
 	async function fileUnwatch(file, remove) {
-		const unsubscribePromise = watchers[file]
+		const watcherPromise = watchers[file]
 		watchers[file] = null
-		const unsubscribe = await unsubscribePromise
-		if (unsubscribe) {
-			await unsubscribe(remove)
+		const watcher = await watcherPromise
+		if (remove && watcher && watcher.outputFiles) {
+			await Promise.all(watcher.outputFiles.map(removeFile))
 		}
 	}
 
-	console.log('watch v1')
-	async function onFileAdded(evt, file) {
+	async function onFileAdded(file) {
 		try {
-			fileWatch(file)
-			console.log('[Added]', file)
+			if (watchers[file]) {
+				return
+			}
+			if (await fileWatch(file)) {
+				console.log('[Added]', file)
+			} else {
+				console.log('[Error]', file)
+			}
 		} catch (err) {
 			console.error(err)
 		}
 	}
 
+	async function updateDependants(_path) {
+		await Promise.all(
+			Object.keys(watchers).map(file => watchers[file])
+		)
+
+		const _dependants = allDependencies.get(_path)
+
+		if (_dependants) {
+			await Promise.all(Array.from(_dependants.values()).map(async (file) => {
+				await fileUnwatch(file, true)
+				console.log('[Deleted]', file)
+				const stat = await getPathStat(file)
+				if (stat && stat.isFile()) {
+					await onFileAdded(file)
+				}
+			}))
+		}
+	}
+
 	async function onPathChanged(evt, _path) {
+		console.log('onPathChanged', evt, _path)
+
 		_path = normalizePath(_path)
+		const pathAsDir = _path + '/'
 
 		if (evt === 'remove') {
-			const pathAsDir = _path + '/'
+			const deletedDirs = []
+			dirs.forEach(dir => {
+				if (dir === _path || dir.startsWith(pathAsDir)) {
+					deletedDirs.push(dir)
+				}
+			})
+			deletedDirs.forEach(dir => {
+				dirs.delete(dir)
+			})
+
 			await Promise.all(
 				Object.keys(watchers).map(async file => {
 					if (file === _path || file.startsWith(pathAsDir)) {
 						await fileUnwatch(file, true)
-						console.log('[Deleted]', file);
+						console.log('[Deleted]', file)
 					}
 				})
 			)
+			await updateDependants(_path)
 			return
 		}
 
 		const pathStat = await getPathStat(_path)
 		if (pathStat) {
 			if (pathStat.isFile()) {
-				await onFileAdded(evt, _path)
-			} else {
-				const paths = await fse.readdir(_path)
-				await Promise.all(paths.map(o => onPathChanged(evt, path.join(_path, o))))
+				if (multimatch([_path], patterns).length > 0) {
+					await updateDependants(_path)
+					await onFileAdded(_path)
+				}
+			} else if (!dirs.has(_path)) {
+				// if (!dirs.has(_path)) {
+					await updateDependants(_path)
+				// }
+				const paths = await getDirPaths(_path)
+				// paths.dirs.forEach(o => {
+				// 	dirs.add(o)
+				// })
+				const files = paths.files
+					.filter(o => multimatch([o], patterns).length > 0)
+				files.forEach(file => {
+					forEachParentDirs(path.dirname(file), dir => {
+						dirs.add(dir)
+					})
+				})
+				await Promise.all(files.map(onFileAdded))
 			}
 		}
 	}
@@ -339,16 +504,7 @@ async function watchFiles(options) {
 
 	nodeWatch(inputDir, {
 		recursive: true,
-		delay: 0,
-		filter(inputFile) {
-			if (multimatch([inputFile], patterns).length > 0) {
-				console.log('watch: ' + inputFile)
-				return true
-			} else {
-				console.log('watch skip: ' + inputFile)
-				return false
-			}
-		},
+		delay: 50,
 	}, enqueueEvent)
 
 	inputFiles.forEach(file => fileWatch(normalizePath(file)))
