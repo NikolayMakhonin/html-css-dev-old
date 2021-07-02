@@ -5,6 +5,7 @@ const fse = require('fs-extra')
 const nodeWatch = require('node-watch')
 const postcss = require('postcss')
 const postcssLoadConfig = require('postcss-load-config')
+const postcssRemoveGlobal = require('postcss-remove-global')
 
 // region helpers
 
@@ -159,7 +160,10 @@ async function buildCss({inputFile, outputFile, postcssConfig}) {
 		const source = await fse.readFile(inputFile, { encoding: 'utf-8' })
 		const map = postcssConfig && postcssConfig.options && postcssConfig.options.map
 
-		const result = await postcss(postcssConfig && postcssConfig.plugins || [])
+		const result = await postcss([
+			...postcssConfig && postcssConfig.plugins,
+			postcssRemoveGlobal(),
+		])
 			.process(source, {
 				...postcssConfig && postcssConfig.options,
 				map: map || {inline: false},
@@ -411,16 +415,17 @@ async function watchFiles(options) {
 
 		const _dependants = allDependencies.get(_path)
 
-		if (_dependants) {
-			await Promise.all(Array.from(_dependants.values()).map(async (file) => {
-				await fileUnwatch(file, true)
-				console.log('[Deleted]', file)
-				const stat = await getPathStat(file)
-				if (stat && stat.isFile()) {
-					await onFileAdded(file)
-				}
-			}))
-		}
+		await Promise.all([
+			..._dependants && Array.from(_dependants.values()) || [],
+			_path,
+		].map(async (file) => {
+			await fileUnwatch(file, true)
+			console.log('[Deleted]', file)
+			const stat = await getPathStat(file)
+			if (stat && stat.isFile()) {
+				await onFileAdded(file)
+			}
+		}))
 	}
 
 	async function onPathChanged(evt, _path) {
