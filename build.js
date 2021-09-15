@@ -122,10 +122,10 @@ async function removeEmptyDirs(dir) {
 	}
 }
 
-async function removeFile(file) {
-	if (fse.existsSync(file)) {
-		await fse.unlink(file)
-		await removeEmptyDirs(path.dirname(file))
+async function removePath(_path) {
+	if (fse.existsSync(_path)) {
+		await fse.rm(_path, { recursive: true, force: true })
+		await removeEmptyDirs(path.dirname(_path))
 		// await tryRun(5, 500, () => removeEmptyDirs(path.dirname(file)))
 	}
 }
@@ -216,7 +216,7 @@ async function copyFile({inputFile, outputFile}) {
 async function buildFile({inputFile, outputFile, postcssConfig}) {
 	outputFile = normalizePath(path.resolve(outputFile))
 	if (fse.existsSync(outputFile)) {
-		await fse.unlink(outputFile)
+		await fse.rm(outputFile, { recursive: true, force: true })
 	}
 	const ext = (path.extname(inputFile) || '').toLowerCase()
 	switch (ext) {
@@ -389,7 +389,7 @@ async function watchFiles(options) {
 		watchers[file] = null
 		const watcher = await watcherPromise
 		if (remove && watcher && watcher.outputFiles) {
-			await Promise.all(watcher.outputFiles.map(removeFile))
+			await Promise.all(watcher.outputFiles.map(removePath))
 		}
 	}
 
