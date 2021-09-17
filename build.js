@@ -180,7 +180,11 @@ async function buildCss({inputFile, outputFile, postcssConfig}) {
 
 		const outputFiles = []
 		async function writeFile(file, content) {
-			await fse.writeFile(outputFile, result.css, () => true)
+			await fse.writeFile(file, content, (err) => {
+				if (err) {
+					console.error(err)
+				}
+			})
 			outputFiles.push(file)
 		}
 
