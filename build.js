@@ -246,12 +246,15 @@ function prepareGlobPatterns(inputDir, filesPatterns) {
 async function prepareBuildFilesOptions({
 	inputDir,
 	outputDir,
+	watchDirs,
 	filesPatterns,
 	map,
 	clear,
 }) {
 	inputDir = path.resolve(inputDir)
 	outputDir = path.resolve(outputDir)
+	watchDirs = new Set(watchDirs && watchDirs.map(o => path.resolve(o)) || [])
+	watchDirs.add(inputDir)
 	const patterns = prepareGlobPatterns(inputDir, filesPatterns)
 	let postcssConfig
 
@@ -272,6 +275,7 @@ async function prepareBuildFilesOptions({
 	return {
 		inputDir,
 		outputDir,
+		watchDirs: Array.from(watchDirs.values()),
 		patterns,
 		postcssConfig,
 	}
@@ -310,6 +314,7 @@ async function watchFiles(options) {
 	const {
 		inputDir,
 		outputDir,
+		watchDirs,
 		patterns,
 		postcssConfig,
 	} = await prepareBuildFilesOptions(options)
@@ -398,6 +403,9 @@ async function watchFiles(options) {
 
 	async function onFileAdded(file) {
 		try {
+			if (multimatch([file], patterns).length === 0) {
+				return
+			}
 			if (watchers[file]) {
 				return
 			}
@@ -463,10 +471,8 @@ async function watchFiles(options) {
 		const pathStat = await getPathStat(_path)
 		if (pathStat) {
 			if (pathStat.isFile()) {
-				if (multimatch([_path], patterns).length > 0) {
-					await updateDependants(_path)
-					await onFileAdded(_path)
-				}
+				await updateDependants(_path)
+				await onFileAdded(_path)
 			} else if (!dirs.has(_path)) {
 				// if (!dirs.has(_path)) {
 					await updateDependants(_path)
@@ -510,10 +516,12 @@ async function watchFiles(options) {
 		processEventsRunning = false
 	}
 
-	nodeWatch(inputDir, {
-		recursive: true,
-		delay: 50,
-	}, enqueueEvent)
+	watchDirs.forEach(watchDir => {
+		nodeWatch(watchDir, {
+			recursive: true,
+			delay: 50,
+		}, enqueueEvent)
+	})
 
 	inputFiles.forEach(file => fileWatch(normalizePath(file)))
 
