@@ -174,7 +174,7 @@ async function buildCss({inputFile, outputFile, postcssConfig}) {
 		const resultMap = result.map && result.map.toJSON()
 		const dependencies = resultMap.sources
 			&& resultMap.sources
-				.map(o => normalizePath(path.resolve(path.dirname(inputFile), o)))
+				.map(o => normalizePath(path.resolve(inputFile, o)))
 				.filter(o => o !== inputFile)
 
 		const outputFiles = []
@@ -370,6 +370,9 @@ async function watchFiles(options) {
 
 			// add dependencies
 			newDependencies.forEach(o => {
+				if (!fse.existsSync(o)) {
+					console.warn('Path not exist: ' + o)
+				}
 				let _dependants = allDependencies.get(o)
 				if (!_dependants) {
 					_dependants = new Set()
