@@ -403,9 +403,6 @@ async function watchFiles(options) {
 
 	async function onFileAdded(file) {
 		try {
-			if (multimatch([file], patterns).length === 0) {
-				return
-			}
 			if (watchers[file]) {
 				return
 			}
@@ -430,6 +427,9 @@ async function watchFiles(options) {
 			..._dependants && Array.from(_dependants.values()) || [],
 			_path,
 		].map(async (file) => {
+			if (multimatch([file], patterns).length === 0) {
+				return
+			}
 			await fileUnwatch(file, true)
 			console.log('[Deleted]', file)
 			const stat = await getPathStat(file)
@@ -472,7 +472,9 @@ async function watchFiles(options) {
 		if (pathStat) {
 			if (pathStat.isFile()) {
 				await updateDependants(_path)
-				await onFileAdded(_path)
+				if (multimatch([_path], patterns).length > 0) {
+					await onFileAdded(_path)
+				}
 			} else if (!dirs.has(_path)) {
 				// if (!dirs.has(_path)) {
 					await updateDependants(_path)

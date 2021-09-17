@@ -1,6 +1,6 @@
 {
 	"name": "@flemist/html-css-dev",
-	"version": "0.0.6",
+	"version": "0.0.7",
 	"description": "Tool for fast develop web pages on html+css or postcss",
 	"main": "server.js",
 	"scripts": {
