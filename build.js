@@ -69,7 +69,7 @@ async function getDirPaths(dir) {
 				files.push(subPath)
 			} else if (stat.isDirectory()) {
 				dirs.push(subPath)
-				await _getDirFiles(subPath, files)
+				await _getDirPaths(subPath, dirs, files)
 			}
 		}))
 		return files
