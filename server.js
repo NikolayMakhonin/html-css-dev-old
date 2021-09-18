@@ -6,6 +6,7 @@ const liveReload = require('@flemist/easy-livereload')
 
 async function _startServer({
 	port = 3522,
+	liveReload = true,
 	liveReloadPort = 34426,
 	publicDir,
 }) {
@@ -20,15 +21,17 @@ async function _startServer({
 	const server = express()
 	server.disable('x-powered-by')
 
-	const liveReloadInstance = liveReload({
-		watchDirs: [publicDir],
-		checkFunc: (file) => {
-			console.log('[LiveReload] ' + file);
-			return true;
-		},
-		port: liveReloadPort,
-	})
-	server.use(liveReloadInstance)
+	if (liveReload) {
+		const liveReloadInstance = liveReload({
+			watchDirs: [publicDir],
+			checkFunc: (file) => {
+				console.log('[LiveReload] ' + file);
+				return true;
+			},
+			port: liveReloadPort,
+		})
+		server.use(liveReloadInstance)
+	}
 
 	async function fileExists(filePath) {
 		if (!fse.existsSync(filePath)) {
