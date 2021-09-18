@@ -2,7 +2,7 @@ const express = require('express')
 const path = require('path')
 const fse = require('fs-extra')
 const sirv = require('sirv')
-const liveReload = require('@flemist/easy-livereload')
+const _liveReload = require('@flemist/easy-livereload')
 
 async function _startServer({
 	port = 3522,
@@ -22,7 +22,7 @@ async function _startServer({
 	server.disable('x-powered-by')
 
 	if (liveReload) {
-		const liveReloadInstance = liveReload({
+		const liveReloadInstance = _liveReload({
 			watchDirs: [publicDir],
 			checkFunc: (file) => {
 				console.log('[LiveReload] ' + file);
