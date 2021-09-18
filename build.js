@@ -175,7 +175,7 @@ async function buildCss({inputFile, outputFile, postcssConfig}) {
 		const dependencies = resultMap.sources
 			&& resultMap.sources
 				.filter(o => o.indexOf('<') < 0) // exclude "<no source>" lines
-				.map(o => normalizePath(path.resolve(inputFile, o)))
+				.map(o => normalizePath(path.resolve(path.join(path.dirname(inputFile), o))))
 				.filter(o => o !== inputFile)
 
 		const outputFiles = []

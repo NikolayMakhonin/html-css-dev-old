@@ -1,13 +1,13 @@
 {
 	"name": "@flemist/html-css-dev",
-	"version": "0.0.11",
+	"version": "0.0.12",
 	"description": "Tool for fast develop web pages on html+css or postcss",
 	"main": "server.js",
 	"scripts": {
-		"start": "node -e \"require('./start.js')({ port: 3333, publicDir: 'public', inputDir: 'source', outputDir: 'public', filesPatterns: ['**'], map: true})\"",
+		"start": "node -e \"require('./start.js')({ port: 3333, publicDir: 'public', inputDir: 'source', outputDir: 'public', watchDirs: ['source-outside'], filesPatterns: ['**'], map: true})\"",
 		"server": "node -e \"require('./server.js')({ port: 3333, publicDir: 'public'})\"",
-		"build": "node -e \"require('./build.js')({ watch: false, inputDir: 'source', outputDir: 'public', filesPatterns: ['**'], map: true})\"",
-		"watch": "node -e \"require('./build.js')({ watch: true, inputDir: 'source', outputDir: 'public', filesPatterns: ['**'], map: true})\""
+		"build": "node -e \"require('./build.js')({ watch: false, inputDir: 'source', outputDir: 'public', watchDirs: ['source-outside'], filesPatterns: ['**'], map: true})\"",
+		"watch": "node -e \"require('./build.js')({ watch: true, inputDir: 'source', outputDir: 'public', watchDirs: ['source-outside'], filesPatterns: ['**'], map: true})\""
 	},
 	"repository": {
 		"type": "git",
