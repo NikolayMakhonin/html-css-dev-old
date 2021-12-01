@@ -1,6 +1,6 @@
 {
 	"name": "@flemist/html-css-dev",
-	"version": "0.0.15",
+	"version": "0.0.16",
 	"description": "Tool for fast develop web pages on html+css or postcss",
 	"main": "server.js",
 	"scripts": {
@@ -23,7 +23,7 @@
 		"access": "public"
 	},
 	"dependencies": {
-		"@flemist/easy-livereload": "^1.4.3",
+		"@flemist/easy-livereload": "^1.4.4",
 		"@types/fs-extra": "^9.0.11",
 		"autoprefixer": "^10.2.6",
 		"cssnano": "^5.0.6",
