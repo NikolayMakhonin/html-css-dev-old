@@ -5,7 +5,7 @@ const fse = require('fs-extra')
 const nodeWatch = require('node-watch')
 const postcss = require('postcss')
 const postcssLoadConfig = require('postcss-load-config')
-const postcssRemoveGlobal = require('postcss-remove-global')
+const postcssRemoveGlobal = require('@flemist/postcss-remove-global')
 
 // region helpers
 
