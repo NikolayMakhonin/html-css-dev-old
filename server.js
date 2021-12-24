@@ -9,21 +9,24 @@ async function _startServer({
 	liveReload = true,
 	liveReloadPort = 34426,
 	publicDir,
+	rootDir = '.',
 }) {
-	publicDir = path.resolve(publicDir)
-	if (!fse.existsSync(publicDir)) {
+	rootDir = path.resolve(rootDir)
+	publicDir = publicDir && path.resolve(publicDir)
+	if (publicDir && !fse.existsSync(publicDir)) {
 		await fse.mkdirp(publicDir)
 	}
 
 	console.debug('port=', port)
 	console.debug('publicDir=', publicDir)
+	console.debug('publicDir=', rootDir)
 
 	const server = express()
 	server.disable('x-powered-by')
 
 	if (liveReload) {
 		const liveReloadInstance = _liveReload({
-			watchDirs: [publicDir],
+			watchDirs: [publicDir, rootDir].filter(o => o),
 			checkFunc: (file) => {
 				console.log('[LiveReload] ' + file);
 				return true;
@@ -48,6 +51,21 @@ async function _startServer({
 			'/',
 			async function (req, res, next) {
 				// liveReloadInstance(req, res, next);
+
+				if (rootDir
+					&& /\.(svelte)$/.test(rootDir + req.path)
+					&& fse.existsSync(rootDir + req.path)
+				) {
+					const svelte = require('svelte/compiler')
+					const component = svelte.compile(rootDir + req.path)
+					next()
+					return
+				}
+
+				if (!publicDir) {
+					next()
+					return
+				}
 
 				let filePath = path.resolve(publicDir + req.path)
 

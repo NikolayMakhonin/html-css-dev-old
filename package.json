@@ -41,5 +41,8 @@
 		"postcss-nested": "^5.0.5",
 		"postcss-preset-env": "^6.7.0",
 		"sirv": "^1.0.12"
+	},
+	"devDependencies": {
+		"svelte": "^3.44.3"
 	}
 }
