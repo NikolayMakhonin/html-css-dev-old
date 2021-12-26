@@ -6,6 +6,7 @@ const nodeWatch = require('node-watch')
 const postcss = require('postcss')
 const postcssLoadConfig = require('postcss-load-config')
 const postcssRemoveGlobal = require('@flemist/postcss-remove-global')
+const {createConfig} = require("./loadConfig");
 
 // region helpers
 
@@ -542,10 +543,11 @@ async function watchFiles(options) {
 // endregion
 
 function _build(options) {
+	options = createConfig(options.baseConfig, { build: options })
 	if (options.watch) {
-		return watchFiles(options)
+		return watchFiles(options.build)
 	} else {
-		return buildFiles(options)
+		return buildFiles(options.build)
 	}
 }
 

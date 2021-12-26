@@ -4,10 +4,10 @@
 	"description": "Tool for fast develop web pages on html+css or postcss",
 	"main": "server.js",
 	"scripts": {
-		"start": "node -e \"require('./start.js')({ port: 3333, publicDir: 'public', inputDir: 'source', outputDir: 'public/build', watchDirs: ['source-outside'], filesPatterns: ['**'], map: true})\"",
-		"server": "node -e \"require('./server.js')({ baseConfig: './web-dev.config.js'})\"",
-		"build": "node -e \"require('./build.js')({ watch: false, inputDir: 'source', outputDir: 'public/build', watchDirs: ['source-outside'], filesPatterns: ['**'], map: true})\"",
-		"watch": "node -e \"require('./build.js')({ watch: true, inputDir: 'source', outputDir: 'public/build', watchDirs: ['source-outside'], filesPatterns: ['**'], map: true})\""
+		"start": "node -e \"require('./start.js')({ baseConfig: './web-dev.config.js' })\"",
+		"server": "node -e \"require('./server.js')({ baseConfig: './web-dev.config.js' })\"",
+		"build": "node -e \"require('./build.js')({ baseConfig: './web-dev.config.js', watch: false })\"",
+		"watch": "node -e \"require('./build.js')({ baseConfig: './web-dev.config.js', watch: true })\""
 	},
 	"repository": {
 		"type": "git",

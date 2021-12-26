@@ -7,6 +7,7 @@ const _liveReload = require('@flemist/easy-livereload')
 const {requireFromString} = require('require-from-memory')
 const _loadRollupConfig = require('rollup/dist/loadConfigFile')
 const {rollup} = require('rollup')
+const {createConfig} = require("./loadConfig");
 
 async function loadRollupConfig(filePath) {
 	const { options, warnings } = await _loadRollupConfig(path.resolve(filePath))
@@ -15,29 +16,15 @@ async function loadRollupConfig(filePath) {
 	return options
 }
 
-async function _startServer(opts) {
-	const baseConfig = typeof opts.baseConfig === 'string'
-		? require(path.resolve(opts.baseConfig)).server
-		: opts.baseConfig || {}
-
-	let {
-		port,
-		liveReload,
-		liveReloadPort,
-		publicDir,
-		rootDir,
-		rollupConfigs,
-		watchPatterns,
-	} = {
-		port: 3522,
-		liveReload: true,
-		liveReloadPort: 34426,
-		rootDir: '.',
-		watchPatterns: '**',
-		...baseConfig,
-		...opts,
-	}
-
+async function _startServer({
+	port,
+	liveReload,
+	liveReloadPort,
+	publicDir,
+	rootDir,
+	rollupConfigs,
+	watchPatterns,
+}) {
 	const unhandledErrorsCode = await fse.readFile(
 		require.resolve('@flemist/web-logger/unhandled-errors.min'),
 		{encoding: 'utf-8'},
@@ -240,7 +227,8 @@ console.log('hydrated')
 }
 
 function startServer(options) {
-	_startServer(options)
+	options = createConfig(options.baseConfig, { server: options })
+	_startServer(options.server)
 		.catch(err => {
 			console.error(err)
 			process.exit(1)
