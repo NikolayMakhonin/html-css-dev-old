@@ -3,14 +3,47 @@ const path = require('path')
 const fse = require('fs-extra')
 const sirv = require('sirv')
 const _liveReload = require('@flemist/easy-livereload')
+const {requireFromString} = require('require-from-memory')
+const _loadRollupConfig = require('rollup/dist/loadConfigFile')
+const {rollup} = require('rollup')
 
-async function _startServer({
-	port = 3522,
-	liveReload = true,
-	liveReloadPort = 34426,
-	publicDir,
-	rootDir = '.',
-}) {
+async function loadRollupConfig(filePath) {
+	const { options, warnings } = await _loadRollupConfig(path.resolve(filePath))
+	// This prints all deferred warnings
+	warnings.flush();
+	return options
+}
+
+async function _startServer(opts) {
+	const baseConfig = typeof opts.baseConfig === 'string'
+		? require(path.resolve(opts.baseConfig)).server
+		: opts.baseConfig || {}
+
+	let {
+		port,
+		liveReload,
+		liveReloadPort,
+		publicDir,
+		rootDir,
+		rollupConfigs,
+	} = {
+		port: 3522,
+		liveReload: true,
+		liveReloadPort: 34426,
+		rootDir: '.',
+		...baseConfig,
+		...opts,
+	}
+
+	const unhandledErrorsCode = await fse.readFile(
+		require.resolve('@flemist/web-logger/unhandled-errors.min'),
+		{encoding: 'utf-8'},
+	)
+
+	rollupConfigs = typeof rollupConfigs === 'string'
+		? await loadRollupConfig(path.resolve(rollupConfigs))
+		: rollupConfigs
+
 	rootDir = path.resolve(rootDir)
 	publicDir = publicDir && path.resolve(publicDir)
 	if (publicDir && !fse.existsSync(publicDir)) {
@@ -56,9 +89,102 @@ async function _startServer({
 					&& /\.(svelte)$/.test(rootDir + req.path)
 					&& fse.existsSync(rootDir + req.path)
 				) {
-					const svelte = require('svelte/compiler')
-					const component = svelte.compile(rootDir + req.path)
-					next()
+					const inputFile = path.resolve(rootDir + req.path)
+					const _outputConfig = {
+						dir: null,
+						file: inputFile,
+						name: inputFile.match(/(^|[\\\/])([^\\\/]+?)(\.\w+)?$/)[2]
+					}
+					const serverConfigIndex = rollupConfigs.findIndex(o => o.output[0].format === 'cjs')
+					const clientConfigIndex = rollupConfigs.findIndex(o => o.output[0].format === 'esm')
+					const outputs = await Promise.all(rollupConfigs.map(async (rollupConfig) => {
+						const outputConfig = {
+							...rollupConfig.output[0],
+							..._outputConfig
+						}
+						const bundle = await rollup({
+							...rollupConfig,
+							input: inputFile,
+							output: outputConfig,
+						})
+						const { output } = await bundle.generate(outputConfig)
+						if (output.length !== 1) {
+							throw new Error(`output.length === ${output.length}`)
+						}
+						return output[0]
+					}))
+					const Component = requireFromString(outputs[serverConfigIndex].code, inputFile + '.js').default
+					const { head, html, css } = Component.render()
+					const componentClassRegexp = /\bexport\s*{\s*(\w+)\s*as\s*default\s*};?\s*$/
+					let componentCode = outputs[clientConfigIndex].code
+					const componentClassName = componentCode.match(componentClassRegexp)[1]
+					componentCode = componentCode.replace(componentClassRegexp, '')
+
+					const responseHtml = `
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+
+<!-- region unhandled errors -->
+
+<script>${unhandledErrorsCode}</script>
+<script>
+try {
+  var url = ''
+  if (typeof location != 'undefined' && location.href) {
+	url = document.location.href
+  } else if (document.location && document.location.href) {
+	url = document.location.href
+  } else if (window.location && window.location.href) {
+	url = window.location.href
+  } else if (document.URL) {
+	url = document.URL
+  } else if (document.documentURI) {
+	url = document.documentURI
+  }
+  window.isDebug = /[?&]debug(=true)?(&|$)/.test(url + '')
+  UnhandledErrors.subscribeUnhandledErrors({
+	alert: window.isDebug,
+	catchConsoleLevels: window.isDebug && ['error', 'warn'],
+	customLog: function(log) {
+	  if (/Test error/.test(log)) {
+		return true
+	  }
+	},
+  })
+  if (window.isDebug) {
+	console.error('Test error')
+  }
+} catch (err) {
+  alert(err)
+}
+</script>
+
+<!-- endregion -->
+
+${head}
+</head>
+<body>
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-T3FX29T" 
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
+${html}
+<script type='module' defer>
+${componentCode};
+
+new ${componentClassName}({
+  target: document.body,
+  hydrate: true,
+});
+
+console.log('hydrated')
+</script>
+</body>
+</html>
+`
+					res.set('Cache-Control', 'no-store')
+					res.send(responseHtml)
 					return
 				}
 

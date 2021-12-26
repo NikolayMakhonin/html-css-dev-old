@@ -5,7 +5,7 @@
 	"main": "server.js",
 	"scripts": {
 		"start": "node -e \"require('./start.js')({ port: 3333, publicDir: 'public', inputDir: 'source', outputDir: 'public/build', watchDirs: ['source-outside'], filesPatterns: ['**'], map: true})\"",
-		"server": "node -e \"require('./server.js')({ port: 3333, publicDir: 'public'})\"",
+		"server": "node -e \"require('./server.js')({ baseConfig: './web-dev.config.js'})\"",
 		"build": "node -e \"require('./build.js')({ watch: false, inputDir: 'source', outputDir: 'public/build', watchDirs: ['source-outside'], filesPatterns: ['**'], map: true})\"",
 		"watch": "node -e \"require('./build.js')({ watch: true, inputDir: 'source', outputDir: 'public/build', watchDirs: ['source-outside'], filesPatterns: ['**'], map: true})\""
 	},
@@ -25,6 +25,7 @@
 	"dependencies": {
 		"@flemist/easy-livereload": "^1.4.4",
 		"@flemist/postcss-remove-global": "^0.1.2",
+		"@flemist/web-logger": "^0.1.21",
 		"@types/fs-extra": "^9.0.11",
 		"autoprefixer": "^10.2.6",
 		"cssnano": "^5.0.6",
@@ -40,9 +41,20 @@
 		"postcss-load-config": "^3.1.0",
 		"postcss-nested": "^5.0.5",
 		"postcss-preset-env": "^6.7.0",
+		"require-from-memory": "^1.0.2",
 		"sirv": "^1.0.12"
 	},
 	"devDependencies": {
-		"svelte": "^3.44.3"
+		"@flemist/postcss-file": "^0.1.7",
+		"@rollup/plugin-commonjs": "^17.1.0",
+		"@rollup/plugin-node-resolve": "^11.2.0",
+		"@rollup/plugin-typescript": "^8.3.0",
+		"@tsconfig/svelte": "^2.0.1",
+		"rollup": "^2.41.2",
+		"rollup-plugin-svelte": "^7.1.0",
+		"svelte": "^3.35.0",
+		"svelte-preprocess": "^4.6.9",
+		"tslib": "^2.3.1",
+		"typescript": "^4.5.4"
 	}
 }
