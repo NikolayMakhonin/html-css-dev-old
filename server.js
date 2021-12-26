@@ -4,16 +4,11 @@ const fse = require('fs-extra')
 const sirv = require('sirv')
 const multimatch = require("multimatch");
 const _liveReload = require('@flemist/easy-livereload')
-const {requireFromString} = require('require-from-memory')
-const _loadRollupConfig = require('rollup/dist/loadConfigFile')
-const {rollup} = require('rollup')
 const {createConfig} = require("./loadConfig");
 
-async function loadRollupConfig(filePath) {
-	const { options, warnings } = await _loadRollupConfig(path.resolve(filePath))
-	// This prints all deferred warnings
-	warnings.flush();
-	return options
+function requireNoCache(module) {
+	delete require.cache[require.resolve(module)];
+	return require(module);
 }
 
 async function _startServer({
@@ -22,7 +17,8 @@ async function _startServer({
 	liveReloadPort,
 	publicDir,
 	rootDir,
-	rollupConfigs,
+	svelteClientUrl,
+	svelteServerDir,
 	watchPatterns,
 }) {
 	const unhandledErrorsCode = await fse.readFile(
@@ -30,15 +26,12 @@ async function _startServer({
 		{encoding: 'utf-8'},
 	)
 
-	rollupConfigs = typeof rollupConfigs === 'string'
-		? await loadRollupConfig(path.resolve(rollupConfigs))
-		: rollupConfigs
-
 	rootDir = path.resolve(rootDir)
 	publicDir = publicDir && path.resolve(publicDir)
 	if (publicDir && !fse.existsSync(publicDir)) {
 		await fse.mkdirp(publicDir)
 	}
+	svelteServerDir = svelteServerDir && path.resolve(svelteServerDir)
 
 	console.debug('port=', port)
 	console.debug('publicDir=', publicDir)
@@ -78,42 +71,23 @@ async function _startServer({
 			async function (req, res, next) {
 				// liveReloadInstance(req, res, next);
 
-				if (rootDir
-					&& /\.(svelte)$/.test(rootDir + req.path)
-					&& fse.existsSync(rootDir + req.path)
-				) {
-					const inputFile = path.resolve(rootDir + req.path)
-					const _outputConfig = {
-						dir: null,
-						file: inputFile,
-						name: inputFile.match(/(^|[\\\/])([^\\\/]+?)(\.\w+)?$/)[2]
-					}
-					const serverConfigIndex = rollupConfigs.findIndex(o => o.output[0].format === 'cjs')
-					const clientConfigIndex = rollupConfigs.findIndex(o => o.output[0].format === 'esm')
-					const outputs = await Promise.all(rollupConfigs.map(async (rollupConfig) => {
-						const outputConfig = {
-							...rollupConfig.output[0],
-							..._outputConfig
-						}
-						const bundle = await rollup({
-							...rollupConfig,
-							input: inputFile,
-							output: outputConfig,
-						})
-						const { output } = await bundle.generate(outputConfig)
-						if (output.length !== 1) {
-							throw new Error(`output.length === ${output.length}`)
-						}
-						return output[0]
-					}))
-					const Component = requireFromString(outputs[serverConfigIndex].code, inputFile + '.js').default
-					const { head, html, css } = Component.render()
-					const componentClassRegexp = /\bexport\s*{\s*(\w+)\s*as\s*default\s*};?\s*$/
-					let componentCode = outputs[clientConfigIndex].code
-					const componentClassName = componentCode.match(componentClassRegexp)[1]
-					componentCode = componentCode.replace(componentClassRegexp, '')
+				if (!publicDir) {
+					next()
+					return
+				}
 
-					const responseHtml = `
+				// region Search svelte file
+
+				if (svelteServerDir && /\.(svelte)$/.test(req.path)) {
+					const _path = req.path.replace(/\.svelte$/, '')
+					const filePath = path.resolve(svelteServerDir + _path + '.js')
+					if (fse.existsSync(filePath)) {
+						const Component = requireNoCache(filePath).default
+						const { head, html, css } = Component.render()
+						const clientJsHref = svelteClientUrl + _path + '.js'
+						const clientCssHref = svelteClientUrl + _path + '.css'
+
+						const responseHtml = `
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -156,35 +130,35 @@ try {
 <!-- endregion -->
 
 ${head}
+<link rel="preload" href="${clientCssHref}" as="style">
+<link rel='stylesheet' href='${clientCssHref}'>
 </head>
 <body>
 ${html}
 <script type='module' defer>
-${componentCode};
+	import Component from '${clientJsHref}';
 
-new ${componentClassName}({
-  target: document.body,
-  hydrate: true,
-});
+	new Component({
+	  target: document.body,
+	  hydrate: true,
+	});
 
-console.log('hydrated')
+	console.log('hydrated')
 </script>
 </body>
 </html>
 `
-					res.set('Cache-Control', 'no-store')
-					res.send(responseHtml)
-					return
+						res.set('Cache-Control', 'no-store')
+						res.send(responseHtml)
+						return
+					}
 				}
 
-				if (!publicDir) {
-					next()
-					return
-				}
-
-				let filePath = path.resolve(publicDir + req.path)
+				// endregion
 
 				// region Search index files
+
+				let filePath = path.resolve(publicDir + req.path)
 
 				let newFilePath = filePath
 				let i = 0
