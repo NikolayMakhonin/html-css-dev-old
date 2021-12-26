@@ -2,6 +2,7 @@ const express = require('express')
 const path = require('path')
 const fse = require('fs-extra')
 const sirv = require('sirv')
+const multimatch = require("multimatch");
 const _liveReload = require('@flemist/easy-livereload')
 const {requireFromString} = require('require-from-memory')
 const _loadRollupConfig = require('rollup/dist/loadConfigFile')
@@ -26,11 +27,13 @@ async function _startServer(opts) {
 		publicDir,
 		rootDir,
 		rollupConfigs,
+		watchPatterns,
 	} = {
 		port: 3522,
 		liveReload: true,
 		liveReloadPort: 34426,
 		rootDir: '.',
+		watchPatterns: '**',
 		...baseConfig,
 		...opts,
 	}
@@ -52,7 +55,7 @@ async function _startServer(opts) {
 
 	console.debug('port=', port)
 	console.debug('publicDir=', publicDir)
-	console.debug('publicDir=', rootDir)
+	console.debug('rootDir=', rootDir)
 
 	const server = express()
 	server.disable('x-powered-by')
@@ -61,6 +64,9 @@ async function _startServer(opts) {
 		const liveReloadInstance = _liveReload({
 			watchDirs: [publicDir, rootDir].filter(o => o),
 			checkFunc: (file) => {
+				if (multimatch([file], watchPatterns).length === 0) {
+					return
+				}
 				console.log('[LiveReload] ' + file);
 				return true;
 			},
