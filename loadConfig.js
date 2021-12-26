@@ -1,5 +1,7 @@
 const path = require('path')
 
+process.env.WEB_DEV = 'true'
+
 const _configDefault = {
     build: {
 
