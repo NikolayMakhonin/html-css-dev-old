@@ -1,6 +1,5 @@
 import svelte from 'rollup-plugin-svelte';
 import resolve from '@rollup/plugin-node-resolve';
-import css from '@flemist/rollup-plugin-css-chunks';
 import sveltePreprocess from 'svelte-preprocess';
 import typescript from '@rollup/plugin-typescript';
 import commonjs from '@rollup/plugin-commonjs'
@@ -84,14 +83,10 @@ const clientConfig = {
       preprocess,
       compilerOptions: {
         hydratable: true,
+        css: true,
       },
-      emitCss: true,
+      emitCss: false,
       // onwarn: onwarnSvelte,
-    }),
-    css({
-      injectImports: true,
-      sourcemap: false,
-      emitFiles: false,
     }),
     typescript({
       sourceMap: dev,
@@ -123,11 +118,6 @@ const serverConfig = {
       },
       emitCss: false,
       // onwarn: onwarnSvelte,
-    }),
-    css({
-      injectImports: true,
-      sourcemap: false,
-      emitFiles: false,
     }),
     typescript({
       sourceMap: dev,
