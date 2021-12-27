@@ -543,11 +543,10 @@ async function watchFiles(options) {
 // endregion
 
 function _build(options) {
-	options = createConfig(options.baseConfig, { build: options })
 	if (options.watch) {
-		return watchFiles(options.build)
+		return watchFiles(options)
 	} else {
-		return buildFiles(options.build)
+		return buildFiles(options)
 	}
 }
 
@@ -560,7 +559,8 @@ function _build(options) {
 //   clear,
 // }
 async function build(options) {
-	_build(options)
+	options = createConfig(options.baseConfig, { build: options })
+	_build(options.build)
 		.catch(err => {
 			console.error(err)
 			process.exit(1)

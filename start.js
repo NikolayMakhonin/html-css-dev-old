@@ -4,7 +4,6 @@ const fse = require('fs-extra')
 const {createConfig} = require("./loadConfig");
 
 async function _start(options) {
-	options = createConfig(options.baseConfig, options, {watch: true})
 	await Promise.all([
 		build(options.build),
 		startServer(options.server),
@@ -12,6 +11,7 @@ async function _start(options) {
 }
 
 function start(options) {
+	options = createConfig(options.baseConfig, options, { build: { watch: true } })
 	_start(options)
 		.catch(err => {
 			console.error(err)
