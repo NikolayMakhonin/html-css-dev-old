@@ -15,18 +15,20 @@ const _configDefault = {
     },
 }
 
-function createConfig(baseConfig, rewriteConfig, configDefault = _configDefault) {
+function createConfig(baseConfig, rewriteConfig, configDefault) {
     baseConfig = typeof baseConfig === 'string'
         ? require(path.resolve(baseConfig))
         : baseConfig || {}
 
     return {
         build: {
+            ..._configDefault?.build || {},
             ...configDefault?.build || {},
             ...baseConfig?.build || {},
             ...rewriteConfig?.build || {},
         },
         server: {
+            ..._configDefault?.server || {},
             ...configDefault?.server || {},
             ...baseConfig?.server || {},
             ...rewriteConfig?.server || {},

@@ -4,7 +4,7 @@ const fse = require('fs-extra')
 const {createConfig} = require("./loadConfig");
 
 async function _start(options) {
-	options = createConfig(options.baseConfig, options)
+	options = createConfig(options.baseConfig, options, {watch: true})
 	await Promise.all([
 		build(options.build),
 		startServer(options.server),
