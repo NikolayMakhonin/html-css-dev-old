@@ -78,12 +78,7 @@ async function _startServer({
 					return
 				}
 
-				if (rootUrl && !req.path.startsWith(rootUrl + '/') && req.path !== rootUrl) {
-					next()
-					return
-				}
-
-				const _path = rootUrl
+				const _path = rootUrl && (req.path.startsWith(rootUrl + '/') || req.path === rootUrl)
 					? req.path.substring(rootUrl.length)
 					: req.path
 
