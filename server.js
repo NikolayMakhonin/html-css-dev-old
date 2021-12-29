@@ -170,35 +170,28 @@ ${html}
 				// region Search index files
 
 				let filePath = path.resolve(publicDir + _path)
+				let filePaths = []
 
 				let newFilePath = filePath
 				let i = 0
 				while (true) {
+					filePaths.push(filePath)
 					if (await fileExists(newFilePath)) {
 						filePath = newFilePath
-						break
+						res.set('Cache-Control', 'no-store')
+						res.sendFile(filePath)
+						return
 					}
 					if (i >= indexFiles.length) {
-						break
+						res.status(404).send('Not Found:\r\n' + filePaths.join('\r\n'))
+						return
 					}
 					newFilePath = path.join(filePath, indexFiles[i])
 					i++
 				}
 
 				// endregion
-
-				if (!/\.(html|htm)$/.test(filePath)) {
-					next()
-					return
-				}
-
-				res.set('Cache-Control', 'no-store')
-				res.sendFile(filePath)
 			},
-
-			sirv(publicDir, {
-				dev: true,
-			})
 		)
 
 	server
