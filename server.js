@@ -17,7 +17,7 @@ async function _startServer({
 	liveReloadPort,
 	publicDir,
 	rootDir,
-	rootUrl,
+	svelteRootUrl,
 	svelteClientUrl,
 	svelteServerDir,
 	watchPatterns,
@@ -27,7 +27,7 @@ async function _startServer({
 		{encoding: 'utf-8'},
 	)
 
-	rootUrl = rootUrl?.replace(/\/+$/, '')
+	svelteRootUrl = svelteRootUrl?.replace(/\/+$/, '')
 	rootDir = path.resolve(rootDir)
 	publicDir = publicDir && path.resolve(publicDir)
 	if (publicDir && !fse.existsSync(publicDir)) {
@@ -81,8 +81,8 @@ async function _startServer({
 				// region Search svelte file
 
 				if (svelteServerDir && /\.(svelte)$/.test(req.path)) {
-					const _path = rootUrl && (req.path.startsWith(rootUrl + '/') || req.path === rootUrl)
-						? req.path.substring(rootUrl.length)
+					const _path = svelteRootUrl && (req.path.startsWith(svelteRootUrl + '/') || req.path === svelteRootUrl)
+						? req.path.substring(svelteRootUrl.length)
 						: req.path
 
 					const urlPath = _path.replace(/\.svelte$/, '')
