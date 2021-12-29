@@ -78,13 +78,13 @@ async function _startServer({
 					return
 				}
 
-				const _path = rootUrl && (req.path.startsWith(rootUrl + '/') || req.path === rootUrl)
-					? req.path.substring(rootUrl.length)
-					: req.path
-
 				// region Search svelte file
 
-				if (svelteServerDir && /\.(svelte)$/.test(_path)) {
+				if (svelteServerDir && /\.(svelte)$/.test(req.path)) {
+					const _path = rootUrl && (req.path.startsWith(rootUrl + '/') || req.path === rootUrl)
+						? req.path.substring(rootUrl.length)
+						: req.path
+
 					const urlPath = _path.replace(/\.svelte$/, '')
 					const filePath = path.resolve(svelteServerDir + urlPath + '.js')
 					if (fse.existsSync(filePath)) {
@@ -164,7 +164,7 @@ ${html}
 
 				// region Search index files
 
-				let filePath = path.resolve(publicDir + _path)
+				let filePath = path.resolve(publicDir + req.path)
 				let filePaths = []
 
 				let newFilePath = filePath
