@@ -17,6 +17,7 @@ async function _startServer({
 	liveReloadPort,
 	publicDir,
 	rootDir,
+	rootUrl,
 	svelteClientUrl,
 	svelteServerDir,
 	watchPatterns,
@@ -26,6 +27,7 @@ async function _startServer({
 		{encoding: 'utf-8'},
 	)
 
+	rootUrl = rootUrl?.replace(/\/+$/, '')
 	rootDir = path.resolve(rootDir)
 	publicDir = publicDir && path.resolve(publicDir)
 	if (publicDir && !fse.existsSync(publicDir)) {
@@ -76,16 +78,25 @@ async function _startServer({
 					return
 				}
 
+				if (rootUrl && !req.path.startsWith(rootUrl + '/') && req.path !== rootUrl) {
+					next()
+					return
+				}
+
+				const _path = rootUrl
+					? req.path.substring(rootUrl.length)
+					: req.path
+
 				// region Search svelte file
 
-				if (svelteServerDir && /\.(svelte)$/.test(req.path)) {
-					const _path = req.path.replace(/\.svelte$/, '')
-					const filePath = path.resolve(svelteServerDir + _path + '.js')
+				if (svelteServerDir && /\.(svelte)$/.test(_path)) {
+					const urlPath = _path.replace(/\.svelte$/, '')
+					const filePath = path.resolve(svelteServerDir + urlPath + '.js')
 					if (fse.existsSync(filePath)) {
 						const Component = requireNoCache(filePath).default
 						const { head, html, css } = Component.render()
-						const clientJsHref = svelteClientUrl + _path + '.js'
-						const clientCssHref = svelteClientUrl + _path + '.css'
+						const clientJsHref = svelteClientUrl + urlPath + '.js'
+						const clientCssHref = svelteClientUrl + urlPath + '.css'
 
 						const responseHtml = `
 <!DOCTYPE html>
@@ -158,7 +169,7 @@ ${html}
 
 				// region Search index files
 
-				let filePath = path.resolve(publicDir + req.path)
+				let filePath = path.resolve(publicDir + _path)
 
 				let newFilePath = filePath
 				let i = 0

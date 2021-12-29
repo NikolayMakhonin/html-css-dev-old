@@ -1,9 +1,10 @@
 module.exports = {
     server: {
         port: 3333,
-        publicDir: 'public',
-        rollupConfigs: './rollup.config.js',
+        rootUrl: 'source',
+        publicDir: 'public/source',
         watchPatterns: ['{public,source}/**'],
+        rollupConfigs: './rollup.config.js',
     },
     build: {
         inputDir: 'source',
