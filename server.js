@@ -78,6 +78,8 @@ async function _startServer({
 					return
 				}
 
+				let filePaths = []
+
 				// region Search svelte file
 
 				if (svelteServerDir && /\.(svelte)$/.test(req.path)) {
@@ -87,6 +89,7 @@ async function _startServer({
 
 					const urlPath = _path.replace(/\.svelte$/, '')
 					const filePath = path.resolve(svelteServerDir + urlPath + '.js')
+					filePaths.push(filePath)
 					if (fse.existsSync(filePath)) {
 						const Component = requireNoCache(filePath).default
 						const { head, html, css } = Component.render()
@@ -165,7 +168,6 @@ ${html}
 				// region Search index files
 
 				let filePath = path.resolve(publicDir + req.path)
-				let filePaths = []
 
 				let newFilePath = filePath
 				let i = 0
