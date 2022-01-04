@@ -139,7 +139,7 @@ try {
 <!-- endregion -->
 
 ${head}
-<link rel="preload" href="${clientCssHref}" as="style">
+<!-- <link rel="preload" href="${clientCssHref}" as="style"> -->
 <link rel='stylesheet' href='${clientCssHref}'>
 </head>
 <body>
