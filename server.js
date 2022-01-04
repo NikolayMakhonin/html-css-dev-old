@@ -100,53 +100,63 @@ async function _startServer({
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<style>
-	/* Hide page while loading css */
-	body {
-	  display: none;
-	}
-</style>
-<link rel="preload" href="${clientCssHref}" as="style">
-
-<!-- region unhandled errors -->
-
-<script>${unhandledErrorsCode}</script>
-<script>
-try {
-  var url = ''
-  if (typeof location != 'undefined' && location.href) {
-	url = document.location.href
-  } else if (document.location && document.location.href) {
-	url = document.location.href
-  } else if (window.location && window.location.href) {
-	url = window.location.href
-  } else if (document.URL) {
-	url = document.URL
-  } else if (document.documentURI) {
-	url = document.documentURI
-  }
-  window.isDebug = /[?&]debug(=true)?(&|$)/.test(url + '')
-  UnhandledErrors.subscribeUnhandledErrors({
-	alert: window.isDebug,
-	catchConsoleLevels: window.isDebug && ['error', 'warn'],
-	customLog: function(log) {
-	  if (/Test error/.test(log)) {
-		return true
+	<!-- region preload -->
+	<style>
+		/* Hide page while loading css */
+		body {
+			display: none;
+		}
+	</style>
+	<link rel="preload" href="${clientCssHref}" as="style">
+	<!-- endregion -->
+	
+	<!-- region unhandled errors -->
+	
+	<script>${unhandledErrorsCode}</script>
+	<script>
+	try {
+	  var url = ''
+	  if (typeof location != 'undefined' && location.href) {
+		url = document.location.href
+	  } else if (document.location && document.location.href) {
+		url = document.location.href
+	  } else if (window.location && window.location.href) {
+		url = window.location.href
+	  } else if (document.URL) {
+		url = document.URL
+	  } else if (document.documentURI) {
+		url = document.documentURI
 	  }
-	},
-  })
-  if (window.isDebug) {
-	console.error('Test error')
-  }
-} catch (err) {
-  alert(err)
-}
-</script>
-
-<!-- endregion -->
-
-<link rel='stylesheet' href='${clientCssHref}'>
-${head}
+	  window.isDebug = /[?&]debug(=true)?(&|$)/.test(url + '')
+	  UnhandledErrors.subscribeUnhandledErrors({
+		alert: window.isDebug,
+		catchConsoleLevels: window.isDebug && ['error', 'warn'],
+		customLog: function(log) {
+		  if (/Test error/.test(log)) {
+			return true
+		  }
+		},
+	  })
+	  if (window.isDebug) {
+		console.error('Test error')
+	  }
+	} catch (err) {
+	  alert(err)
+	}
+	</script>
+	
+	<!-- endregion -->
+	
+	<!-- region load -->
+	<style>
+		@import '${clientCssHref}';
+		/* Show page after css loaded */
+		body {
+			display: block;
+		}
+	</style>
+	<!-- endregion -->
+	${head}
 </head>
 <body>
 ${html}
