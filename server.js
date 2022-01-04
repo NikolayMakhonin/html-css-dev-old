@@ -100,6 +100,13 @@ async function _startServer({
 <!DOCTYPE html>
 <html lang="ru">
 <head>
+<style>
+	/* Hide page while loading css */
+	body {
+	  display: none;
+	}
+</style>
+<link rel="preload" href="${clientCssHref}" as="style">
 
 <!-- region unhandled errors -->
 
@@ -138,9 +145,8 @@ try {
 
 <!-- endregion -->
 
-${head}
-<!-- <link rel="preload" href="${clientCssHref}" as="style"> -->
 <link rel='stylesheet' href='${clientCssHref}'>
+${head}
 </head>
 <body>
 ${html}
