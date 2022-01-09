@@ -100,6 +100,7 @@ async function _startServer({
 <!DOCTYPE html>
 <html lang="ru">
 <head>
+	<meta charset="UTF-8" />
 	<!-- region preload -->
 	<style>
 		/* Hide page while loading css */
