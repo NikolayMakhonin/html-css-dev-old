@@ -23,8 +23,8 @@
 		"access": "public"
 	},
 	"peerDependencies": {
-		"postcss": ">=8.3.5",
-		"rollup": ">=2.79.0"
+		"postcss": ">=8",
+		"rollup": ">=2"
 	},
 	"dependencies": {
 		"@flemist/easy-livereload": "1.4.4",
