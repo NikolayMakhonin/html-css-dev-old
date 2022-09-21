@@ -6,8 +6,13 @@ const nodeWatch = require('node-watch')
 const postcss = require('postcss')
 const postcssLoadConfig = require('postcss-load-config')
 const postcssRemoveGlobal = require('@flemist/postcss-remove-global')
+const {createConfig} = require("./loadConfig");
 
 // region helpers
+
+function escapeRegExp(text) {
+    return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
 
 // function fileNameWithoutExtension(filePath) {
 // 	return filePath.match(/([^\/\\]+?)(\.\w+)?$/)[1]
@@ -170,6 +175,19 @@ async function buildCss({inputFile, outputFile, postcssConfig}) {
 				from: inputFile,
 				to: outputFile,
 			})
+
+		result.css = result.css.replace(new RegExp(`\\burl\\((${
+		escapeRegExp(path.resolve('.'))
+			.replace(/[/\\]/, '[/\\\\]')
+		}[/\\\\][^)]+)\\)`, 'g'),
+			(_, assetPath) => {
+				const relativeAssetPath = path.relative(
+					path.resolve(path.dirname(outputFile)),
+					path.resolve(assetPath),
+				).replace(/\\/g, '/')
+				return `url(${relativeAssetPath})`
+			},
+		)
 
 		const resultMap = result.map && result.map.toJSON()
 		const dependencies = resultMap.sources
@@ -558,7 +576,8 @@ function _build(options) {
 //   clear,
 // }
 async function build(options) {
-	_build(options)
+	options = createConfig(options.baseConfig, { build: options })
+	_build(options.build)
 		.catch(err => {
 			console.error(err)
 			process.exit(1)
