@@ -4,7 +4,6 @@ module.exports = {
         rootUrl: 'source',
         publicDir: 'public/source',
         watchPatterns: ['{public,source}/**'],
-        rollupConfigs: './rollup.config.js',
     },
     build: {
         inputDir: 'source',

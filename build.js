@@ -10,6 +10,10 @@ const {createConfig} = require("./loadConfig");
 
 // region helpers
 
+function escapeRegExp(text) {
+    return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
 // function fileNameWithoutExtension(filePath) {
 // 	return filePath.match(/([^\/\\]+?)(\.\w+)?$/)[1]
 // }
@@ -171,6 +175,19 @@ async function buildCss({inputFile, outputFile, postcssConfig}) {
 				from: inputFile,
 				to: outputFile,
 			})
+
+		result.css = result.css.replace(new RegExp(`\\burl\\((${
+		escapeRegExp(path.resolve('.'))
+			.replace(/[/\\]/, '[/\\\\]')
+		}[/\\\\][^)]+)\\)`, 'g'),
+			(_, assetPath) => {
+				const relativeAssetPath = path.relative(
+					path.resolve(path.dirname(outputFile)),
+					path.resolve(assetPath),
+				).replace(/\\/g, '/')
+				return `url(${relativeAssetPath})`
+			},
+		)
 
 		const resultMap = result.map && result.map.toJSON()
 		const dependencies = resultMap.sources
