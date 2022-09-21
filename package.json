@@ -1,6 +1,6 @@
 {
 	"name": "@flemist/html-css-dev",
-	"version": "1.0.14",
+	"version": "1.0.15",
 	"description": "Tool for fast develop web pages on html+css or postcss",
 	"main": "server.js",
 	"scripts": {
@@ -28,7 +28,7 @@
 	},
 	"dependencies": {
 		"@flemist/easy-livereload": "1.4.4",
-		"@flemist/postcss-remove-global": "0.1.5",
+		"@flemist/postcss-remove-global": "0.1.6",
 		"@flemist/web-logger": "0.1.21",
 		"@types/fs-extra": "9.0.13",
 		"express": "4.17.1",
