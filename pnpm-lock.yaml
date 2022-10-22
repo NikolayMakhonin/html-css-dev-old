@@ -4,6 +4,7 @@ specifiers:
   '@flemist/easy-livereload': 1.4.4
   '@flemist/postcss-file': 0.1.7
   '@flemist/postcss-remove-global': 0.1.6
+  '@flemist/time-limits': 0.0.5
   '@flemist/web-logger': 0.1.21
   '@rollup/plugin-commonjs': 17.1.0
   '@rollup/plugin-node-resolve': 11.2.1
@@ -36,6 +37,7 @@ specifiers:
 dependencies:
   '@flemist/easy-livereload': 1.4.4
   '@flemist/postcss-remove-global': 0.1.6_postcss@8.4.16
+  '@flemist/time-limits': 0.0.5
   '@flemist/web-logger': 0.1.21
   '@types/fs-extra': 9.0.13
   express: 4.17.1
@@ -87,6 +89,21 @@ packages:
     engines: {node: '>=4.0.0'}
     dev: true
 
+  /@flemist/abort-controller-fast/0.0.5:
+    resolution: {integrity: sha512-ewpqfmNx+V5dqTzVBxi7syhhsFRk5ktNOd0d85tKyGkqwzoMyJSYGBPmycYhlUDSsIN/3Nb2EaE0tPOtfw6PNQ==}
+    dependencies:
+      tslib: 2.4.0
+    dev: false
+
+  /@flemist/async-utils/0.0.11:
+    resolution: {integrity: sha512-XuHqpW9Z4teIM/aWWYZPZVLtS0DOOqhrTV/6DUcglSE2fZUfbyImdljRYq73ovwAwUy6ZmARFh25C+CoOf5UPw==}
+    engines: {node: '>=10.4.0', pnpm: ^7.1.6}
+    dependencies:
+      '@flemist/abort-controller-fast': 0.0.5
+      '@flemist/time-controller': 0.0.1
+      tslib: 2.4.0
+    dev: false
+
   /@flemist/easy-livereload/1.4.4:
     resolution: {integrity: sha512-DPzYlkdFjgNyp3P/+NHMP8RUUN/yqs3wcQgHJ0hZ4kAm2GfeHvnwQ1mYZHVQsJjhVLsc0NybA3aY1vRP7R8ILA==}
     dependencies:
@@ -98,6 +115,20 @@ packages:
       - bufferutil
       - supports-color
       - utf-8-validate
+    dev: false
+
+  /@flemist/pairing-heap/0.0.1:
+    resolution: {integrity: sha512-bsXb0bYvrhkibbWAURawIvcR09l5sgRsnFAAwGXr1F1TPZqBL9KMzB0QTlwmokKkd3ci5GqsUUWE1BzK80l6Rg==}
+    engines: {node: '>=10.4.0', pnpm: ^7.1.6}
+    dependencies:
+      tslib: 2.4.0
+    dev: false
+
+  /@flemist/pairing-heap/0.0.7:
+    resolution: {integrity: sha512-6t5LhqU5ahJzhsrnf5I2clbq1FWZbpEp+41mVEatQxm5/G9x2jk8OlLScEMSlGubcx/ZFLiS8ndge6a7ZiZ/cQ==}
+    engines: {node: '>=10.4.0', pnpm: ^7.1.6}
+    dependencies:
+      tslib: 2.4.0
     dev: false
 
   /@flemist/postcss-file/0.1.7:
@@ -115,6 +146,36 @@ packages:
       postcss: '>=8'
     dependencies:
       postcss: 8.4.16
+    dev: false
+
+  /@flemist/priority-queue/0.0.9:
+    resolution: {integrity: sha512-+yBaLX972yTBzj5TKNhxsoQspbiKC8u3CRR0HNO5rahJ4ixYJMAVFmn8D9S0TiLqTd1NOlYteSqe3Sy9epW8Ag==}
+    engines: {node: '>=10.4.0', pnpm: ^7.1.6}
+    dependencies:
+      '@flemist/abort-controller-fast': 0.0.5
+      '@flemist/async-utils': 0.0.11
+      '@flemist/pairing-heap': 0.0.7
+      '@flemist/time-controller': 0.0.1
+      tslib: 2.4.0
+    dev: false
+
+  /@flemist/time-controller/0.0.1:
+    resolution: {integrity: sha512-z2rddW0+5+fPc+rf3Irq1w1SCzxjYGmv6BrG98nuOXcByK0v+oIsAfslFQudUqJHxZ59fZ6WbzAlgRsLoFDYIw==}
+    engines: {node: '>=10.4.0', pnpm: ^7.1.6}
+    dependencies:
+      '@flemist/pairing-heap': 0.0.1
+      tslib: 2.4.0
+    dev: false
+
+  /@flemist/time-limits/0.0.5:
+    resolution: {integrity: sha512-4N0JTwyE+xLVPm47gJ1Aztrwt0hgU2+7i2tTiWGMNyI4GceygK/5eSNFl6gKcEkiOoX7NOM9pRyHk5CquC8fNw==}
+    engines: {node: '>=10.4.0', pnpm: ^7.1.6}
+    dependencies:
+      '@flemist/abort-controller-fast': 0.0.5
+      '@flemist/async-utils': 0.0.11
+      '@flemist/priority-queue': 0.0.9
+      '@flemist/time-controller': 0.0.1
+      tslib: 2.4.0
     dev: false
 
   /@flemist/web-logger/0.1.21:
@@ -2277,6 +2338,10 @@ packages:
   /tslib/2.3.1:
     resolution: {integrity: sha512-77EbyPPpMz+FRFRuAFlWMtmgUWGe9UOG2Z25NqCwiIjRhOf5iKGuzSe5P2w1laq+FkRy4p+PCuVkJSGkzTEKVw==}
     dev: true
+
+  /tslib/2.4.0:
+    resolution: {integrity: sha512-d6xOpEDfsi2CZVlPQzGeux8XMwLT9hssAsaPYExaQMuYskwb+x1x7J371tWlbBdWHroy99KnVB6qIkUbs5X3UQ==}
+    dev: false
 
   /type-is/1.6.18:
     resolution: {integrity: sha512-TkRKr9sUTxEH8MdfuCSP7VizJyzRNMjj2J2do2Jr3Kym598JVdEksuzPQCnlFPW4ky9Q+iA+ma9BGm06XQBy8g==}

@@ -7,6 +7,11 @@ const postcss = require('postcss')
 const postcssLoadConfig = require('postcss-load-config')
 const postcssRemoveGlobal = require('@flemist/postcss-remove-global')
 const {createConfig} = require("./loadConfig");
+const {PoolRunner, Pool} = require("@flemist/time-limits");
+const os = require('os')
+
+const cpuCount = os.cpus().length
+const cpuPoolRunner = new PoolRunner(new Pool(cpuCount))
 
 // region helpers
 
@@ -165,7 +170,7 @@ async function buildCss({inputFile, outputFile, postcssConfig}) {
 		const source = await fse.readFile(inputFile, { encoding: 'utf-8' })
 		const map = postcssConfig && postcssConfig.options && postcssConfig.options.map
 
-		const result = await postcss([
+		const result = await cpuPoolRunner.run(1, () => postcss([
 			...postcssConfig && postcssConfig.plugins,
 			postcssRemoveGlobal(),
 		])
@@ -174,11 +179,11 @@ async function buildCss({inputFile, outputFile, postcssConfig}) {
 				map: map || {inline: false},
 				from: inputFile,
 				to: outputFile,
-			})
+			}))
 
 		result.css = result.css.replace(new RegExp(`\\burl\\((${
-		escapeRegExp(path.resolve('.'))
-			.replace(/[/\\]/, '[/\\\\]')
+			escapeRegExp(path.resolve('.'))
+				.replace(/[/\\]/, '[/\\\\]')
 		}[/\\\\][^)]+)\\)`, 'g'),
 			(_, assetPath) => {
 				const relativeAssetPath = path.relative(
