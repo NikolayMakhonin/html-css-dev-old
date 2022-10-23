@@ -108,7 +108,7 @@ async function getPathStat(filePath) {
 
 async function dirIsEmpty(dir) {
 	const dirIter = await fse.opendir(dir);
-	const {value, done} = await dirIter[Symbol.asyncIterator]().next();
+	const {done} = await dirIter[Symbol.asyncIterator]().next();
 	if (!done) {
 		await dirIter.close()
 		return false
@@ -281,8 +281,8 @@ async function prepareBuildFilesOptions({
 }) {
 	inputDir = path.resolve(inputDir)
 	outputDir = path.resolve(outputDir)
-	watchDirs = new Set(watchDirs && watchDirs.map(o => path.resolve(o)) || [])
-	watchDirs.add(inputDir)
+	const watchDirsSet = new Set(watchDirs && watchDirs.map(o => path.resolve(o)) || [])
+	watchDirsSet.add(inputDir)
 	const patterns = prepareGlobPatterns(inputDir, filesPatterns)
 	let postcssConfig
 
@@ -303,7 +303,7 @@ async function prepareBuildFilesOptions({
 	return {
 		inputDir,
 		outputDir,
-		watchDirs: Array.from(watchDirs.values()),
+		watchDirs: Array.from(watchDirsSet.values()),
 		patterns,
 		postcssConfig,
 	}
@@ -553,7 +553,21 @@ async function watchFiles(options) {
 		}, enqueueEvent)
 	})
 
-	inputFiles.forEach(file => fileWatch(normalizePath(file)))
+	let buildCount = 0
+	let timePrev = 0
+	function progress() {
+		buildCount++
+		const now = Date.now()
+		if (now - timePrev > 1000 || buildCount === inputFiles.length) {
+			timePrev = now
+			console.log(`${Math.floor(buildCount / inputFiles.length * 100)}%`)
+		}
+	}
+
+	await Promise.all(inputFiles.map(async file => {
+		await fileWatch(normalizePath(file))
+		progress()
+	}))
 
 	console.log('watch started...')
 
