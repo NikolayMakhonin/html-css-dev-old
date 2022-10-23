@@ -339,6 +339,8 @@ async function buildFiles(options) {
 // region watchFiles
 
 async function watchFiles(options) {
+	const timeStart = Date.now()
+
 	const {
 		inputDir,
 		outputDir,
@@ -569,7 +571,7 @@ async function watchFiles(options) {
 		progress()
 	}))
 
-	console.log('watch started...')
+	console.log(`watch started... ${Math.round((Date.now() - timeStart) / 1000)}s`)
 
 	return async () => {
 		await Promise.all(Object.keys(watchers).map(fileUnwatch))
